@@ -1,0 +1,23 @@
+# ทุกครั้งที่แก้ไฟล์ใน branch หลัก (default branch) ให้คัดลอกไปที่ branch gh-pages
+# ซึ่ง GitHub Pages ใช้แสดงหน้าแอป https://piyanart502-dev.github.io/Kitchen/
+name: Publish app to GitHub Pages
+
+on:
+  push:
+    branches-ignore: [gh-pages]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-gh-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: git push --force origin HEAD:refs/heads/gh-pages
