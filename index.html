@@ -1195,6 +1195,7 @@ function localBackend(){
 }
 
 /* หลังบ้าน Google Apps Script: POST แบบ text/plain (ไม่ต้อง preflight) ทุกคำขอส่ง PIN ไปด้วย */
+const API_ERRORS=['pin','bad_request','bad_op','bad_id','bad_col','bad_image','server'];
 let pinAsk=null;
 function askPin(wrong){
   if(pinAsk)return pinAsk;
@@ -1215,6 +1216,8 @@ async function api(op,body){
     let j=null;try{j=JSON.parse(txt)}catch(e){}
     if(!j||typeof j!=='object')throw dbErr('bad_url');
     if(j.error==='pin'){await askPin(tries>0||!!lsGet('kw_pin'));continue}
+    // ตอบกลับไม่ใช่รูปแบบของ KITCHEN-WORK.gs ชุดนี้ = ใน Apps Script ยังเป็นโค้ดเก่า
+    if(j.ok!==true&&!API_ERRORS.includes(j.error)||op==='sync'&&j.ok===true&&j.version==null)throw dbErr('old_backend');
     if(!j.ok)throw dbErr(j.error||'server',j.message);
     return j;
   }
@@ -1243,6 +1246,7 @@ async function syncNow(){
     NET.fails++;next=Math.min(60000,10000*NET.fails);
     if(!BE.ready||NET.fails>1){const c=e&&e.code;
       const msg=c==='network'?'เชื่อมต่อหลังบ้านไม่ได้ ตรวจอินเทอร์เน็ต และใน Apps Script ต้องตั้ง "ผู้ที่มีสิทธิ์เข้าถึง: ทุกคน"'
+        :c==='old_backend'?'โค้ดใน Apps Script ยังเป็นเวอร์ชันเก่า ให้วาง <a href="https://raw.githubusercontent.com/piyanart502-dev/Kitchen/claude/kitchen-work-mobile-app-69bfx7/KITCHEN-WORK.gs" target="_blank" rel="noopener">KITCHEN-WORK.gs ล่าสุด</a> ทับ แล้วกด การทำให้ใช้งานได้ > จัดการการทำให้ใช้งานได้ > ✏️ > เวอร์ชันใหม่'
         :c==='bad_url'||c==='bad_op'?'ลิงก์ Apps Script ไม่ถูกต้อง หรือยังไม่ได้อัปเดตเป็นเวอร์ชันใหม่'
         :'หลังบ้านแจ้งข้อผิดพลาด: '+esc(e&&e.message||c||'ไม่ทราบสาเหตุ');
       setBanner((BE.ready?'ข้อมูลอาจยังไม่อัปเดต · ':'ยังบันทึกไม่ได้ · ')+msg,'bad')}
