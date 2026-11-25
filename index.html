@@ -570,7 +570,9 @@ const MOVE_T={in:'รับ',out:'เบิก',adj:'ปรับยอด'};
 const fmtQ=q=>String(+(+q).toFixed(2));
 const byOrder=(a,b)=>((a.order??999)-(b.order??999))||a.name.localeCompare(b.name,'th');
 const isLow=it=>(+it.bal||0)<=(+it.min||0);
-const UNITS=['ขวด','แกลลอน','กก.','กรัม','ถุง','ลัง','ซอง','กระป๋อง','ลิตร','แพ็ค'];
+const UNITS=['ขวด','กล่อง','แกลลอน','กก.','กรัม','ถุง','ลัง','ซอง','กระป๋อง','ลิตร','แพ็ค'];
+/* หน่วยที่หน่วยงานกำหนด: ถ้าในชีตยังเป็นหน่วยอื่น แอปจะแก้ให้อัตโนมัติ */
+const FIXED_UNITS={'กะทิ':'กล่อง'};
 const GTASKS=['ตักไขมันออก','เก็บเศษอาหาร/ตะแกรง','ล้างบ่อทั้งหมด','ใส่จุลินทรีย์/EM'];
 const GCOND=['ปกติ','มีกลิ่น','ไขมันหนา','น้ำไหลช้า/อุดตัน','ชำรุด'];
 const RCAT=['ความปลอดภัยอาหาร','อุบัติเหตุ/ความปลอดภัยบุคลากร','อัคคีภัย/ไฟฟ้า/แก๊ส','สุขาภิบาล/สัตว์พาหะ','เครื่องมือ/อุปกรณ์ชำรุด','ข้อร้องเรียน/บริการ','อื่น ๆ'];
@@ -1267,7 +1269,10 @@ const qp=new URLSearchParams(location.search).get('page')||(location.hash||'').s
 go(['home','temp','grease','seas'].includes(qp)?qp:'home');
 const sub=(col,key)=>DB.collection(col).orderBy('ts','desc').limit(1000).onSnapshot(snap=>{S[key]=snap.docs.map(d=>({...d.data(),_id:d.id}));renderAll()});
 sub('temps','temps');sub('grease_weeks','weeks');sub('stock_moves','moves');
-DB.collection('stock_items').orderBy('ts').limit(1000).onSnapshot(sn=>{S.items=sn.docs.map(d=>({...d.data(),_id:d.id}));renderAll()});
+DB.collection('stock_items').orderBy('ts').limit(1000).onSnapshot(sn=>{S.items=sn.docs.map(d=>({...d.data(),_id:d.id}));renderAll();
+  S.items.forEach(it=>{const u=FIXED_UNITS[String(it.name||'').trim()];if(u&&it.unit!==u&&!fixUnit.done[it._id]){fixUnit.done[it._id]=1;fixUnit(it._id,u)}})});
+function fixUnit(id,u){Promise.resolve().then(()=>DB.collection('stock_items').doc(id).update({unit:u})).catch(()=>{delete fixUnit.done[id]})}
+fixUnit.done={};
 DB.doc('settings/main').onSnapshot(s=>{if(s.exists){const d=s.data();S.settings={...structuredClone(DEFAULT_SETTINGS),...d,cabinets:(d.cabinets&&d.cabinets.length)?d.cabinets.map(c=>({...c})):structuredClone(DEFAULT_SETTINGS.cabinets)};renderAll()}});
 if(BE.mode==='local'){
   setBanner('โหมดทดลอง: ยังไม่ได้ใส่ลิงก์ Apps Script ข้อมูลที่บันทึกจะอยู่ในเครื่องนี้เท่านั้น · <a href="https://github.com/piyanart502-dev/Kitchen#readme" target="_blank" rel="noopener">วิธีเชื่อม Google Sheets</a>');
